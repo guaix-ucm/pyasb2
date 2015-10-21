@@ -58,9 +58,7 @@ class Star(object):
         else:
             self.invalid = True
 
-        try:
-            assert(self.FilterMag < image_info.max_magnitude)
-        except:
+        if not (self.FilterMag < image_info.max_magnitude):
             self.invalid = True
 
     def camera_independent_astrometry(self, star_catalog_line, image_info):
@@ -139,7 +137,7 @@ class Star(object):
         if self.to_be_masked == True:
             try:
                 self.append_to_star_mask(FitsImage)
-            except:
+            except StandardError:
                 print('Cannot add star to mask')
 
     def clear_objects(self):
@@ -172,9 +170,7 @@ class Star(object):
         else:
             self.invalid = True
 
-        try:
-            assert(self.FilterMag < image_info.max_magnitude)
-        except:
+        if not (self.FilterMag < image_info.max_magnitude):
             self.invalid = True
 
     def from_tuple(self, record, filter):
@@ -199,9 +195,9 @@ class Star(object):
             '''
             try:
                 return(float(value))
-            except:
+            except ValueError:
                 self.IncompletePhot = True
-                return(0)
+                return 0
 
         def star_is_photometric(self):
             '''
@@ -257,12 +253,12 @@ class Star(object):
         self.SpType = str(record[14]).replace(' ', '')
         self.isBadPhot = str(record[15]).replace(' ', '') == "*"
 
-        try:
-            # Try to find the common name
-            self.name = record[16]
-        except:
-            # Use the HDcode as name
-            self.name = self.HDcode
+
+        # Try to find the common name
+        self.name = record[16]
+
+        # Use the HDcode as name
+        self.name = self.HDcode
 
         star_is_photometric(self)
 
@@ -291,9 +287,7 @@ class Star(object):
         else:
             self.invalid = True
 
-        try:
-            assert(self.FilterMag < image_info.max_magnitude)
-        except:
+        if not (self.FilterMag < image_info.max_magnitude):
             self.invalid = True
 
     def star_astrometry_sky(self, image_info):
@@ -311,7 +305,7 @@ class Star(object):
 
         try:
             pyephem_star = pyephem_declaration(self, ObsPyephem)
-        except:
+        except StandardError:
             self.invalid = True
 
         if self.invalid == False:
@@ -323,9 +317,7 @@ class Star(object):
             self.azimuth, self.altit_real = eq2horiz(
                 self.ra, self.dec, image_info)
 
-            try:
-                assert(self.altit_real) > float(image_info.min_altitude)
-            except:
+            if self.altit_real < float(image_info.min_altitude):
                 self.invalid = True
             else:
                 self.zdist_real = 90.0 - self.altit_real
@@ -333,9 +325,7 @@ class Star(object):
         if self.invalid == False:
             # Apparent coordinates in sky. Atmospheric refraction effect.
             self.altit_appa = atmospheric_refraction(self.altit_real, 'dir')
-            try:
-                assert(self.altit_appa) > float(image_info.min_altitude)
-            except:
+            if self.altit_appa < float(image_info.min_altitude):
                 self.invalid = True
             else:
                 self.zdist_appa = 90.0 - self.altit_appa
@@ -347,12 +337,8 @@ class Star(object):
             XYCoordinates = horiz2xy(self.azimuth, self.altit_appa, image_info)
             self.Xcoord = XYCoordinates[0]
             self.Ycoord = XYCoordinates[1]
-            try:
-                assert(
-                    self.Xcoord > 0. and self.Xcoord < image_info.resolution[0])
-                assert(
-                    self.Ycoord > 0. and self.Ycoord < image_info.resolution[1])
-            except:
+
+            if (not (self.Xcoord > 0. and self.Xcoord < image_info.resolution[0])) or (not(self.Ycoord > 0. and self.Ycoord < image_info.resolution[1])):
                 self.invalid = True
 
     def photometric_radius(self, image_info):
@@ -373,7 +359,7 @@ class Star(object):
             self.R1 = int(image_info.base_radius * MF_totl)
             self.R2 = self.R1 * 1.5 + 1
             self.R3 = self.R1 * 3.0 + 3
-        except:
+        except StandardError:
             self.invalid = True
 
     def estimate_fits_region_star(self, FitsImage):
@@ -494,7 +480,7 @@ class Star(object):
                 off_flux * np.log((1. + alpha) * (1. * off_flux / (on_flux + off_flux)))))
 
             #print("alpha = %.3f, Li&Ma significance = %.2f" % (alpha, self.lima_sig))
-        except:
+        except StandardError:
             self.invalid = True
 
     def star_region_is_masked(self, FitsImage):
@@ -510,10 +496,7 @@ class Star(object):
     def star_is_saturated(self, image_info):
         ''' Return true if star has one or more saturated pixels 
             requires a defined self.fits_region_star'''
-        try:
-            assert(np.max(self.fits_region_star_uncalibrated)
-                   < 0.9 * 2 ** image_info.ccd_bits)
-        except:
+        if not (np.max(self.fits_region_star_uncalibrated) < 0.9 * 2 ** image_info.ccd_bits):
             # self.destroy=True
             self.PhotometricStandard = False
             self.saturated = True
@@ -523,11 +506,10 @@ class Star(object):
     def star_has_cold_pixels(self, image_info):
         ''' Return true if star has one or more cold (0 value) pixels 
             requires a defined self.fits_region_star'''
-        try:
-            min_region = np.min(self.fits_region_star_uncalibrated)
-            med_region = np.median(self.fits_region_star_uncalibrated)
-            assert(min_region > 0.2 * med_region)
-        except:
+
+        min_region = np.min(self.fits_region_star_uncalibrated)
+        med_region = np.median(self.fits_region_star_uncalibrated)
+        if not (min_region > 0.2 * med_region):
             # self.destroy=True
             self.PhotometricStandard = False
             self.cold_pixels = True
@@ -538,13 +520,7 @@ class Star(object):
         ''' Set a detection limit to remove weak stars'''
         ''' Check if star is detectable '''
 
-        try:
-            assert(self.starflux > 0)
-            assert(self.lima_sig > 0)
-            assert(self.lima_sig > image_info.baseflux_detectable)
-            # assert(self.starflux>\
-            # image_info.baseflux_detectable*self.starflux_err+1e-10)
-        except:
+        if (self.starflux < 0) or (self.lima_sig < 0) or (self.lima_sig < image_info.baseflux_detectable):
             self.invalid = True
 
     def estimate_centroid(self):
@@ -562,7 +538,7 @@ class Star(object):
                 (np.dot(np.dot(x1, data), y1)) - w / 2.
             self.Ycoord += (np.dot(np.dot(x, data), y1)) / \
                 (np.dot(np.dot(x1, data), y1)) - h / 2.
-        except:
+        except StandardError:
             self.invalid = True
 
     def optimal_aperture_photometry(self, image_info, fits_data):
@@ -571,25 +547,24 @@ class Star(object):
         all flux is contained in R1
         '''
 
-        try:
-            radius = (image_info.base_radius + self.R1) / 2.
-            iterate = True
-            num_iterations = 0
+        radius = (image_info.base_radius + self.R1) / 2.
+        iterate = True
+        num_iterations = 0
 
-            self.starflux = 0
-            while iterate:
-                num_iterations += 1
-                old_starflux = self.starflux
-                self.R1 = radius
-                self.measure_star_fluxes(fits_data)
-                if self.starflux < (1 + 0.002 * num_iterations ** 2) * old_starflux:
-                    iterate = False
-                else:
-                    radius += 1
+        self.starflux = 0
+        while iterate:
+            num_iterations += 1
+            old_starflux = self.starflux
+            self.R1 = radius
+            self.measure_star_fluxes(fits_data)
+            if self.starflux < (1 + 0.002 * num_iterations ** 2) * old_starflux:
+                iterate = False
+            else:
+                radius += 1
 
-                assert(radius < self.R2)
-        except:
-            self.invalid = True
+            if radius > self.R2:
+                self.invalid = True
+                break
 
     def photometry_bouguervar(self, image_info):
         # Calculate parameters used in bouguer law fit
@@ -602,7 +577,7 @@ class Star(object):
             self.m25logF = self.FilterMag + _25logF + color_term * self.Color
             self.m25logF_unc = np.sqrt(
                 _25logF_unc ** 2 + (color_term_err * self.Color) ** 2)
-        except:
+        except StandardError:
             self.PhotometricStandard = False
             # self.destroy=True
 
@@ -687,10 +662,7 @@ class StarCatalog(object):
         print(" - With photometry: %d" % len(self.StarList_Phot))
 
     def save_to_file(self, image_info):
-        try:
-            assert(image_info.photometry_table_path not in [
-                   False, "False", "false", "F"])
-        except:
+        if image_info.photometry_table_path in [False, "False", "false", "F"]:
             print('Skipping write photometric table to file')
         else:
             print('Write photometric table to file')

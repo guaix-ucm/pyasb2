@@ -109,11 +109,8 @@ class SkyBrightness(object):
         self.AZgrid = self.AZgrid * np.pi / 180.
 
     def sbdata_table(self, ImageInfo):
-        try:
-            assert(ImageInfo.skybrightness_table_path != False)
-        except AssertionError:
+        if not ImageInfo.skybrightness_table_path:
             print('Skipping write skybrightness table to file')
-            raise
         else:
             print('Write skybrightness table to file')
 
@@ -151,7 +148,7 @@ class SkyBrightness(object):
             # If previous grid calculus, then extract from that grid
             self.SBzenith = np.median(self.SBgrid[self.ZDgrid == 0])
             self.SBzenith_err = np.max(self.SBgrid_errors[self.ZDgrid == 0])
-        except:
+        except AttributeError:
             # If not previous grid, calculate manually.
             zenith_acceptance = 10
             limits = {

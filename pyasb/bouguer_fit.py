@@ -57,13 +57,13 @@ class BouguerFit(object):
 
     def bouguer_fixedy(self, image_info):
         ''' Try to get the fixed Y (zero point)'''
-        try:
-            self.fixed_y = image_info.used_zero_point[0]
-            self.fixed_y_unc = image_info.used_zero_point[1]
-            self.yisfixed = True
-        except:
-            print(' dont fix the Zero Point')
-            self.yisfixed = False
+        #try:
+        self.fixed_y = image_info.used_zero_point[0]
+        self.fixed_y_unc = image_info.used_zero_point[1]
+        self.yisfixed = True
+        #except:
+        #    print(' dont fix the Zero Point')
+        #    self.yisfixed = False
 
     def bouguer_setdefaults(self, image_info):
         ''' Set default values (just in case that the bouguer fit fails '''
@@ -164,7 +164,8 @@ class TheilSenRegression(object):
     # Robust Theil Sen estimator, instead of the classic least-squares.
 
     def __init__(self, Xpoints, Ypoints, image_info, y0=None, y0err=None, x0=None, x0err=None):
-        assert(len(Xpoints) == len(Ypoints) and len(Ypoints) > 2)
+        if (len(Xpoints) != len(Ypoints) or len(Ypoints) <= 2):
+            raise ValueError("len(Xpoints) != len(Ypoints) or len(Ypoints) > 2)")
         self.Xpoints = np.array(Xpoints)
         self.Ypoints = np.array(Ypoints)
         if y0 != None:
